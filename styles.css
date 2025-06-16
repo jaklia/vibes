@@ -1,0 +1,74 @@
+body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #e5e7eb; /* light gray background */
+    color: #111827;
+  }
+  header {
+    background-color: #111827;
+    color: #e5e7eb;
+    padding: 2rem;
+    text-align: center;
+  }
+  h1 {
+    margin: 0;
+    font-size: 2.5rem;
+  }
+  #subtitle {
+    font-size: 1.2rem;
+    margin-top: 0.5rem;
+    transition: opacity 0.8s  ease-in-out;
+  }
+  main {
+    padding: 2rem;
+    max-width: 1000px;
+    height: 100%;
+    margin: auto;
+  }
+  .projects {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+  .project-card {
+    background: #f3f4f6; /* slightly off-white */
+    border-radius: 1rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    transition: transform 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-decoration: none;
+    color: inherit;
+  }
+  .project-card:hover {
+    transform: translateY(-5px);
+  }
+  .project-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: #2563eb;
+  }
+  .project-desc {
+    font-size: 0.95rem;
+    color: #4b5563;
+    flex-grow: 1;
+  }
+  .project-footer {
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+  footer.page-footer {
+    background-color: #111827;
+    color: #e5e7eb;
+    text-align: center;
+    padding: 1rem;
+    margin-top: 3rem;
+  }
+  a.project-card {
+    display: flex;
+    flex-direction: column;
+  }
