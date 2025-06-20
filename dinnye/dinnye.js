@@ -8,6 +8,9 @@ const friction = 0.98;
 const colors = ["#FF0", "#FA0", "#F00", "#A0F", "#0FF", "#0F0", "#08F", "#F8F", "#F88", "#888", "#FFF"];
 const radii = Array.from({ length: 11 }, (_, i) => 10 + i ** 1.12 * 6);
 let score = 0;
+let highScore = parseFloat(localStorage.getItem('highScore') || '0');
+let cooldown = 0;
+let gameOver = false;
 
 class Fruit {
     constructor(x, y, type, staticFollow = false) {
@@ -48,10 +51,42 @@ class Fruit {
         ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
     }
+
+    velocityY() {
+        return this.pos.y - this.prevPos.y;
+    }
+}
+
+class FloatingText {
+    constructor(text, x, y) {
+        this.text = text;
+        this.x = x;
+        this.y = y;
+        this.opacity = 1;
+        this.dy = -0.5;
+    }
+
+    update() {
+        this.y += this.dy;
+        this.opacity -= 0.02;
+    }
+
+    draw(ctx) {
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = '#FFF';
+        ctx.font = '16px sans-serif';
+        ctx.fillText(this.text, this.x, this.y);
+        ctx.globalAlpha = 1;
+    }
+
+    isDone() {
+        return this.opacity <= 0;
+    }
 }
 
 let fruits = [];
-const bounds = { left: 100, right: 500, top: 100, bottom: 640 }; // Adjusted bowl height
+let floatingTexts = [];
+const bounds = { left: 100, right: 500, top: 100, bottom: 640 };
 
 let nextType = Math.floor(Math.random() * 3);
 let previewType = Math.floor(Math.random() * 3);
@@ -65,12 +100,13 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 canvas.addEventListener("click", () => {
-    if (currentFruit) {
+    if (currentFruit && cooldown === 0 && !gameOver) {
         currentFruit.staticFollow = false;
         fruits.push(currentFruit);
         currentFruit = new Fruit(currentFruit.pos.x, 60, previewType, true);
         nextType = previewType;
         previewType = Math.floor(Math.random() * 5);
+        cooldown = 20;
     }
 });
 
@@ -87,7 +123,9 @@ function resolveCollisions() {
             if (dist < minDist) {
                 if (a.type === b.type && !a.merged && !b.merged) {
                     a.merged = b.merged = true;
-                    score += ((2 + a.type) * (1 + a.type)) / 2;
+                    let pts = ((2 + a.type) * (1 + a.type)) / 2;
+                    score += pts;
+                    floatingTexts.push(new FloatingText(`+${Math.floor(pts)}`, (a.pos.x + b.pos.x) / 2, (a.pos.y + b.pos.y) / 2));
 
                     if (a.type < 10) {
                         let newX = (a.pos.x + b.pos.x) / 2;
@@ -146,15 +184,46 @@ function drawScore() {
     ctx.fillStyle = '#FFF';
     ctx.font = '18px sans-serif';
     ctx.fillText(`Score: ${Math.floor(score)}`, 20, 30);
+    ctx.fillText(`High: ${Math.floor(highScore)}`, 20, 50);
+}
+
+function checkLoseCondition() {
+    if (cooldown > 0) return;
+    for (let fruit of fruits) {
+        if (!fruit.staticFollow && fruit.pos.y + fruit.radius < bounds.top && fruit.velocityY() < -0.5) {
+            gameOver = true;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('highScore', highScore);
+            }
+            document.getElementById('game-over-text').innerHTML = `Game Over!<br>Score: ${Math.floor(score)}<br>High Score: ${Math.floor(highScore)}`;
+            document.getElementById('game-over').style.display = 'block';
+            document.body.classList.add('game-over');
+        }
+    }
+}
+
+function restartGame() {
+    fruits = [];
+    floatingTexts = [];
+    score = 0;
+    cooldown = 0;
+    gameOver = false;
+    currentFruit = new Fruit(canvas.width / 2, 60, Math.floor(Math.random() * 3), true);
+    previewType = Math.floor(Math.random() * 3);
+    document.getElementById('game-over').style.display = 'none';
+    document.body.classList.remove('game-over');
+    gameLoop();
 }
 
 function gameLoop() {
+    if (gameOver) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = '#444';
-    ctx.fillRect(bounds.left - 10, bounds.top, 10, bounds.bottom - bounds.top); // left wall
-    ctx.fillRect(bounds.right, bounds.top, 10, bounds.bottom - bounds.top); // right wall
-    ctx.fillRect(bounds.left, bounds.bottom, bounds.right - bounds.left, 20); // floor
+    ctx.fillRect(bounds.left - 10, bounds.top, 10, bounds.bottom - bounds.top);
+    ctx.fillRect(bounds.right, bounds.top, 10, bounds.bottom - bounds.top);
+    ctx.fillRect(bounds.left, bounds.bottom, bounds.right - bounds.left, 20);
 
     fruits.forEach(fruit => {
         fruit.update();
@@ -168,8 +237,17 @@ function gameLoop() {
         currentFruit.draw(ctx);
     }
 
+    floatingTexts.forEach(text => {
+        text.update();
+        text.draw(ctx);
+    });
+    floatingTexts = floatingTexts.filter(t => !t.isDone());
+
     drawPreview();
     drawScore();
+
+    if (cooldown > 0) cooldown--;
+    checkLoseCondition();
 
     requestAnimationFrame(gameLoop);
 }

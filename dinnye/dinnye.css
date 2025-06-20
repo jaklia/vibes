@@ -1,0 +1,38 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; background: #222; }
+    canvas { display: block; margin: 0 auto; background: #333; }
+    body.game-over canvas {
+      filter: blur(3px) brightness(0.7);
+    }
+    #game-over {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.85);
+      padding: 30px 40px;
+      border-radius: 20px;
+      text-align: center;
+      color: #fff;
+      font-family: 'Arial', sans-serif;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+      display: none;
+      animation: fadeIn 0.4s ease-out;
+    }
+    #game-over button {
+      margin-top: 20px;
+      font-size: 16px;
+      padding: 10px 20px;
+      border: none;
+      background: #44c767;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #game-over button:hover {
+      background: #38a55c;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95) translate(-50%, -50%); }
+      to   { opacity: 1; transform: scale(1) translate(-50%, -50%); }
+    }

@@ -4,16 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mini 🍉 Game</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; overflow: hidden; background: #222; }
-    canvas { display: block; margin: 0 auto; background: #333; }
+  <link rel="stylesheet" href="dinnye.css">
+   
   </style>
 </head>
 <body>
   <canvas id="game"></canvas>
+  <div id="game-over">
+    <div id="game-over-text"></div>
+    <button onclick="restartGame()">Restart</button>
+  </div>
   <script src="dinnye.js">
-    
+   
   </script>
 </body>
 </html>
+
