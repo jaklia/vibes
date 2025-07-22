@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Music Reactive Metaballs</title>
+  <style>
+    body { margin: 0; background: #000; color: #fff; font-family: sans-serif; }
+    #ui {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: rgba(0,0,0,0.6);
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 10;
+    }
+    label, input { display: block; margin-bottom: 6px; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    .value-display { font-size: 0.8em; color: #ccc; margin-left: 4px; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <label>🎵 Select audio:
+      <input type="file" id="fileInput" accept="audio/*">
+    </label>
+    <label>🔵 Metaballs: <span id="mballsVal" class="value-display">12</span>
+      <input type="range" id="mballsSlider" min="1" max="64" value="12">
+    </label>
+    <label>📈 Freq X: <span id="freqXVal" class="value-display">0.7</span>
+      <input type="range" id="freqXSlider" min="0.1" max="5.0" step="0.1" value="0.7">
+    </label>
+    <label>📉 Freq Y: <span id="freqYVal" class="value-display">0.1</span>
+      <input type="range" id="freqYSlider" min="0.1" max="5.0" step="0.1" value="0.1">
+    </label>
+    <label>🔥 Intensity Boost: <span id="intensityVal" class="value-display">0.3</span>
+      <input type="range" id="intensitySlider" min="0.1" max="3.0" step="0.1" value="0.3">
+    </label>
+    <label>🌀 Spiral Angle: <span id="spiralVal" class="value-display">4</span>
+      <input type="range" id="spiralSlider" min="0.0" max="12" step="0.1" value="4">
+    </label>
+
+    <label style="display:flex; align-items:center;margin-top:24px"> 🔀 Mode
+      <input type="checkbox" id="lissajousToggle"  style="margin-left: 8px;"> 
+    </label>
+    <label style="display:flex; align-items:center;">🎨 Color 1:
+      <input type="color" id="color1" value="#000033" style="margin-left: 8px">
+    </label>
+    <label style="display:flex; align-items:center;">🎨 Color 2:
+      <input type="color" id="color2" value="#3399cc" style="margin-left: 8px">
+    </label>
+    <label style="display:flex; align-items:center;">🎨 Color 3:
+      <input type="color" id="color3" value="#eefcc5" style="margin-left: 8px">
+    </label>
+  </div>
+  <canvas id="glcanvas"></canvas>
+
+  <script type="x-shader/x-fragment" id="fragShader">
+    precision mediump float;
+    uniform float t;
+    uniform float intensity;
+    uniform int MBALLS;
+    uniform float freqX;
+    uniform float freqY;
+    uniform float spiralAngle;
+    uniform bool useLissajous;
+    uniform vec3 c1;
+    uniform vec3 c2;
+    uniform vec3 c3;
+    varying vec2 uv;
+
+    void main() {
+      vec2 pos = uv * 2.0 - 1.0;
+      float field = 0.0;
+      for (int i = 0; i < 64; i++) {
+        if (i >= MBALLS) break;
+        float fi = float(i) / float(MBALLS);
+        float angle = fi * spiralAngle * 3.14159;
+        float angleX = useLissajous ? angle * freqX : angle;
+        float angleY = useLissajous ? angle * freqY : angle;
+        float offset = useLissajous ? 0. : fi * 0.3 - .15;
+        vec2 center = vec2(
+          sin(t * freqX + angleX) * (0.5 + offset),
+          cos(t * freqY + angleY) * (0.5 + offset)
+        );
+        float mb = intensity / 2.0;
+        field += mb / (distance(pos, center) + 0.02);
+      }
+      float e = smoothstep(1.2, 3.0, field);
+      e = pow(e, 1.5);
+      vec3 color;
+      if (e < 0.5)
+        color = mix(c1, c2, e * 2.0);
+      else
+        color = mix(c2, c3, (e - 0.5) * 2.0);
+      gl_FragColor = vec4(color * 0.8, 1.0);
+    }
+  </script>
+
+  <script>
+    const canvas = document.getElementById('glcanvas');
+    const gl = canvas.getContext('webgl');
+    const fragShaderSrc = document.getElementById('fragShader').textContent;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const vertSrc = `
+      attribute vec2 position;
+      varying vec2 uv;
+      void main() {
+        uv = position * 0.5 + 0.5;
+        gl_Position = vec4(position, 0, 1);
+      }`;
+    const createShader = (type, src) => {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(s));
+      }
+      return s;
+    };
+    const vertShader = createShader(gl.VERTEX_SHADER, vertSrc);
+    const fragShader = createShader(gl.FRAGMENT_SHADER, fragShaderSrc);
+
+    const program = gl.createProgram();
+    gl.attachShader(program, vertShader);
+    gl.attachShader(program, fragShader);
+    gl.linkProgram(program);
+    gl.useProgram(program);
+
+    const posBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      -1, -1, 3, -1, -1, 3
+    ]), gl.STATIC_DRAW);
+    const posLoc = gl.getAttribLocation(program, "position");
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+    const tLoc = gl.getUniformLocation(program, "t");
+    const intensityLoc = gl.getUniformLocation(program, "intensity");
+    const mballsLoc = gl.getUniformLocation(program, "MBALLS");
+    const freqXLoc = gl.getUniformLocation(program, "freqX");
+    const freqYLoc = gl.getUniformLocation(program, "freqY");
+    const spiralLoc = gl.getUniformLocation(program, "spiralAngle");
+    const lissajousLoc = gl.getUniformLocation(program, "useLissajous");
+    const c1Loc = gl.getUniformLocation(program, "c1");
+    const c2Loc = gl.getUniformLocation(program, "c2");
+    const c3Loc = gl.getUniformLocation(program, "c3");
+
+    let audioCtx, analyser, sourceNode;
+    const fftSize = 128;
+    const fftData = new Uint8Array(fftSize);
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (sourceNode) sourceNode.disconnect();
+
+      const reader = new FileReader();
+      reader.onload = function () {
+        audioCtx.decodeAudioData(reader.result, function (buffer) {
+          sourceNode = audioCtx.createBufferSource();
+          sourceNode.buffer = buffer;
+
+          analyser = audioCtx.createAnalyser();
+          analyser.fftSize = fftSize;
+
+          sourceNode.connect(analyser);
+          analyser.connect(audioCtx.destination);
+          sourceNode.start();
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    const sliders = {
+      mballs: document.getElementById('mballsSlider'),
+      freqX: document.getElementById('freqXSlider'),
+      freqY: document.getElementById('freqYSlider'),
+      intensity: document.getElementById('intensitySlider'),
+      spiral: document.getElementById('spiralSlider'),
+    };
+    const values = {
+      mballs: document.getElementById('mballsVal'),
+      freqX: document.getElementById('freqXVal'),
+      freqY: document.getElementById('freqYVal'),
+      intensity: document.getElementById('intensityVal'),
+      spiral: document.getElementById('spiralVal'),
+    };
+    Object.keys(sliders).forEach(key => {
+      sliders[key].addEventListener('input', () => {
+        values[key].textContent = sliders[key].value;
+      });
+    });
+
+    const colors = {
+      c1: document.getElementById('color1'),
+      c2: document.getElementById('color2'),
+      c3: document.getElementById('color3'),
+    };
+
+    const parseColor = (hex) => {
+      const bigint = parseInt(hex.slice(1), 16);
+      return [
+        ((bigint >> 16) & 255) / 255,
+        ((bigint >> 8) & 255) / 255,
+        (bigint & 255) / 255
+      ];
+    };
+
+    const lissajousToggle = document.getElementById('lissajousToggle');
+
+    let startTime = performance.now();
+    function render() {
+      requestAnimationFrame(render);
+      const now = performance.now();
+      const t = (now - startTime) * 0.001;
+
+      let intensity = 0.5;
+      if (analyser) {
+        analyser.getByteFrequencyData(fftData);
+        intensity = fftData.reduce((a, b) => a + b) / fftData.length / 255;
+      }
+
+      const intensityBoost = parseFloat(sliders.intensity.value);
+
+      gl.useProgram(program);
+      gl.uniform1f(tLoc, t);
+      gl.uniform1f(intensityLoc, intensity * intensityBoost);
+      gl.uniform1i(mballsLoc, parseInt(sliders.mballs.value));
+      gl.uniform1f(freqXLoc, parseFloat(sliders.freqX.value));
+      gl.uniform1f(freqYLoc, parseFloat(sliders.freqY.value));
+      gl.uniform1f(spiralLoc, parseFloat(sliders.spiral.value));
+      gl.uniform1i(lissajousLoc, lissajousToggle.checked);
+
+      gl.uniform3fv(c1Loc, parseColor(colors.c1.value));
+      gl.uniform3fv(c2Loc, parseColor(colors.c2.value));
+      gl.uniform3fv(c3Loc, parseColor(colors.c3.value));
+
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+
+    render();
+  </script>
+</body>
+</html>
