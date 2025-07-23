@@ -5,53 +5,82 @@
   <title>Meta Visualizer</title>
   <style>
     body { margin: 0; background: #000; color: #fff; font-family: sans-serif; }
-    #ui {
-      position: absolute;
-      top: 10px; left: 10px;
-      background: rgba(0,0,0,0.6);
-      padding: 10px;
-      border-radius: 8px;
-      z-index: 10;
-    }
-    label, input { display: block; margin-bottom: 6px; }
+    #ui { position: absolute; top: 10px; left: 10px; z-index: 10; min-width: 250px; max-width: 300px; }
+    .ui-part { background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; margin-bottom: 10px; position: relative; }
+    .ui-part-title {margin-bottom: 10px;}
+    .close-btn { position: absolute; top: 6px; right: 6px; background: transparent; border: none; color: #aaa; font-size: 1em; cursor: pointer; }
+    .close-btn:hover { color: #fff; }
+    .toggle-btn { background: rgba(0,0,0,0.6); border: none; color: #fff; padding: 6px; cursor: pointer; border-radius: 4px; font-size: 1.2em; }
+    #playlist { max-height: 100px; overflow-y: auto; border: 1px solid #444; padding: 4px; }
+    #playlist div { cursor: pointer; padding: 2px 4px; }
+    #playlist .active { background: #3399cc; }
+    .controls { display: flex; gap: 6px; justify-content: center; align-items: center; }
+    .controls button { flex: 1; }
+    .controls-btn {background: transparent; border: none; font-size: 0.9em;}
+    .controls .current {font-size: 0.8em; color: #ddd;}
+    .settings label { display: block; margin-bottom: 8px; }
+    .settings input[type="range"] { width: 100%; }
+    .settings .label-inline { display: flex; justify-content: space-between; font-size: 0.9em; color: #ccc; }
+    #playerUI { position: fixed; top: 10px; left: 40%; min-width: 300px; max-width: 350px; }
     canvas { display: block; width: 100vw; height: 100vh; }
-    .value-display { font-size: 0.8em; color: #ccc; margin-left: 4px; }
+
   </style>
 </head>
 <body>
   <div id="ui">
-    <label>🎵 Select audio:
-      <input type="file" id="fileInput" accept="audio/*">
-    </label>
-    <label>🔵 Metaballs: <span id="mballsVal" class="value-display">12</span>
-      <input type="range" id="mballsSlider" min="1" max="64" value="12">
-    </label>
-    <label>📈 Freq X: <span id="freqXVal" class="value-display">0.7</span>
-      <input type="range" id="freqXSlider" min="0.1" max="5.0" step="0.1" value="0.7">
-    </label>
-    <label>📉 Freq Y: <span id="freqYVal" class="value-display">0.1</span>
-      <input type="range" id="freqYSlider" min="0.1" max="5.0" step="0.1" value="0.1">
-    </label>
-    <label>🔥 Intensity Boost: <span id="intensityVal" class="value-display">0.3</span>
-      <input type="range" id="intensitySlider" min="0.1" max="3.0" step="0.1" value="0.3">
-    </label>
-    <label>🌀 Spiral Angle: <span id="spiralVal" class="value-display">4</span>
-      <input type="range" id="spiralSlider" min="0.0" max="12" step="0.1" value="4">
-    </label>
+    <!-- Playlist UI -->
+    <button id="showPlaylistBtn" class="toggle-btn" title="Show playlist" style="display:none;">📜</button>
+    <div id="playlistUI" class="ui-part">
+      <button id="togglePlaylist" class="close-btn" title="Hide playlist">✖</button>
+      <div class="ui-part-title">Playlist</div>
+      <button id="addBtn" title="Add music">🎵 Add</button>
+      <input type="file" id="fileInput" accept="audio/*" multiple style="display:none">
+      <div id="playlist"></div>
+    </div>
 
-    <label style="display:flex; align-items:center;margin-top:24px"> 🔀 Mode
-      <input type="checkbox" id="lissajousToggle"  style="margin-left: 8px;"> 
-    </label>
-    <label style="display:flex; align-items:center;">🎨 Color 1:
-      <input type="color" id="color1" value="#000033" style="margin-left: 8px">
-    </label>
-    <label style="display:flex; align-items:center;">🎨 Color 2:
-      <input type="color" id="color2" value="#3399cc" style="margin-left: 8px">
-    </label>
-    <label style="display:flex; align-items:center;">🎨 Color 3:
-      <input type="color" id="color3" value="#eefcc5" style="margin-left: 8px">
-    </label>
+    <!-- Player Controls UI -->
+    <div id="playerUI" class="ui-part">
+      <div class="controls">
+        <div id="currentSong" class="current">No song selected</div>
+        <button id="prevBtn" class="controls-btn" title="Previous">◀️</button>
+        <button id="playPauseBtn" class="controls-btn" title="Pause/play">⏯️</button>
+        <button id="nextBtn" class="controls-btn" title="Next">▶️</button>
+      </div>
+    </div>
+
+    <!-- Settings UI -->
+    <button id="showSettingsBtn" class="toggle-btn" title="Show settings" style="display:none;">⚙️</button>
+    <div id="settingsUI" class="ui-part settings">
+      <button id="toggleSettings" class="close-btn" title="Hide settings">✖</button>
+      <div class="ui-part-title">Settings</div>
+      <label><div class="label-inline">🔵 Metaballs: <span id="mballsVal">12</span></div>
+        <input type="range" id="mballsSlider" min="1" max="64" value="12">
+      </label>
+      <label><div class="label-inline">📈 Freq X: <span id="freqXVal">0.7</span></div>
+        <input type="range" id="freqXSlider" min="0.1" max="5.0" step="0.1" value="0.7">
+      </label>
+      <label><div class="label-inline">📉 Freq Y: <span id="freqYVal">0.1</span></div>
+        <input type="range" id="freqYSlider" min="0.1" max="5.0" step="0.1" value="0.1">
+      </label>
+      <label><div class="label-inline">🔥 Intensity: <span id="intensityVal">0.3</span></div>
+        <input type="range" id="intensitySlider" min="0.1" max="3.0" step="0.1" value="0.3">
+      </label>
+      <label><div class="label-inline">🌀 Spiral Angle: <span id="spiralVal">4</span></div>
+        <input type="range" id="spiralSlider" min="0.0" max="12" step="0.1" value="4">
+      </label>
+      <label style="display:flex; align-items:center;"><input type="checkbox" id="lissajousToggle" style="margin-right:8px;">🔀 Mode</label>
+      <label style="display:flex; align-items:center;">🎨 Color 1:
+        <input type="color" id="color1" value="#000033" style="margin-left:8px;">
+      </label>
+      <label style="display:flex; align-items:center;">🎨 Color 2:
+        <input type="color" id="color2" value="#3399cc" style="margin-left:8px;">
+      </label>
+      <label style="display:flex; align-items:center;">🎨 Color 3:
+        <input type="color" id="color3" value="#eefcc5" style="margin-left:8px;">
+      </label>
+    </div>
   </div>
+
   <canvas id="glcanvas"></canvas>
 
   <script type="x-shader/x-fragment" id="fragShader">
@@ -154,32 +183,128 @@
     const c2Loc = gl.getUniformLocation(program, "c2");
     const c3Loc = gl.getUniformLocation(program, "c3");
 
-    let audioCtx, analyser, sourceNode;
+
+    // Toggle playlist
+    const playlistUI = document.getElementById('playlistUI');
+    const togglePlaylist = document.getElementById('togglePlaylist');
+    const showPlaylistBtn = document.getElementById('showPlaylistBtn');
+    togglePlaylist.onclick = () => {
+      playlistUI.style.display = 'none';
+      showPlaylistBtn.style.display = 'block';
+    };
+    showPlaylistBtn.onclick = () => {
+      playlistUI.style.display = 'block';
+      showPlaylistBtn.style.display = 'none';
+    };
+
+    // Toggle settings
+    const settingsUI = document.getElementById('settingsUI');
+    const toggleSettings = document.getElementById('toggleSettings');
+    const showSettingsBtn = document.getElementById('showSettingsBtn');
+    toggleSettings.onclick = () => {
+      settingsUI.style.display = 'none';
+      showSettingsBtn.style.display = 'block';
+    };
+    showSettingsBtn.onclick = () => {
+      settingsUI.style.display = 'block';
+      showSettingsBtn.style.display = 'none';
+    };
+
+    // Audio & Playlist Logic
+    let audioCtx, analyser;
+    let playIdCounter = 0;  // To ignore stale plays
     const fftSize = 128;
     const fftData = new Uint8Array(fftSize);
+    const playlist = [];
+    let currentIndex = -1;
+    let sourceNode;
+    const playlistEl = document.getElementById('playlist');
+    const fileInput = document.getElementById('fileInput');
+    const currentSong = document.getElementById('currentSong');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
 
-    document.getElementById('fileInput').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    // Hidden file input trigger
+    const addBtn = document.getElementById('addBtn');
+    addBtn.onclick = () => fileInput.click();
 
+    fileInput.addEventListener('change', e => {
+      Array.from(e.target.files).forEach(file => {
+        const url = URL.createObjectURL(file);
+        playlist.push({ name: file.name, url });
+      });
+      renderPlaylist();
+      if (currentIndex === -1) playIndex(0);
+    });
+
+    function renderPlaylist() {
+      playlistEl.innerHTML = '';
+      playlist.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.textContent = item.name;
+        div.className = i === currentIndex ? 'active' : '';
+        div.onclick = () => playIndex(i);
+        playlistEl.appendChild(div);
+      });
+    }
+
+    function playIndex(i) {
+      if (i < 0 || i >= playlist.length) return;
+      currentIndex = i;
+      currentSong.innerText = playlist[currentIndex].name;
+      renderPlaylist();
+      playIdCounter++; // cancel any ongoing play attempts
+      const myId = playIdCounter;
+      // Stop and clean up previous source if exists
+      if (sourceNode) {
+        try {
+          sourceNode.stop();
+        } catch (e) {}
+        sourceNode.disconnect();
+      }
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (sourceNode) sourceNode.disconnect();
-
-      const reader = new FileReader();
-      reader.onload = function () {
-        audioCtx.decodeAudioData(reader.result, function (buffer) {
+      // Fetch and decode audio buffer, then play
+      fetch(playlist[i].url)
+        .then(res => res.arrayBuffer())
+        .then(arrayBuffer => new Promise((resolve, reject) => {
+          audioCtx.decodeAudioData(arrayBuffer, resolve, reject);
+        }))
+        .then(audioBuffer => {
+          if (myId !== playIdCounter) return; // stale
           sourceNode = audioCtx.createBufferSource();
-          sourceNode.buffer = buffer;
-
+          sourceNode.buffer = audioBuffer;
           analyser = audioCtx.createAnalyser();
           analyser.fftSize = fftSize;
-
           sourceNode.connect(analyser);
           analyser.connect(audioCtx.destination);
-          sourceNode.start();
-        });
-      };
-      reader.readAsArrayBuffer(file);
+          sourceNode.start(0);
+          playPauseBtn.textContent = '⏸️';
+          playPauseBtn.title = 'Pause';
+          sourceNode.onended = () => { if (myId === playIdCounter) playIndex(currentIndex + 1); };
+        })
+        .catch(err => console.error('Error decoding audio', err));
+    }
+
+    function handlePlayPause () {
+      if (!sourceNode) return;
+      if (audioCtx.state === 'running') {
+        audioCtx.suspend();
+        playPauseBtn.textContent = '▶️';
+        playPauseBtn.title = 'Play';
+      } else {
+        audioCtx.resume();
+        playPauseBtn.textContent = '⏸️';
+        playPauseBtn.title = 'Pause';
+      }
+    };
+
+    playPauseBtn.onclick = () => handlePlayPause();
+    prevBtn.onclick = () => playIndex(currentIndex - 1);
+    nextBtn.onclick = () => playIndex(currentIndex + 1);
+
+    window.addEventListener('keydown', e => { 
+      if(e.code === 'Space') handlePlayPause();
     });
 
     const sliders = {
